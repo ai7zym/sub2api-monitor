@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="bg-zinc-50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 - 上游价格监控</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-zinc-50 px-4">
+  <div class="w-full max-w-sm">
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-3">
+        <span class="text-white text-lg font-bold">￥</span>
+      </div>
+      <h1 class="text-lg font-semibold text-zinc-800 tracking-tight">上游价格监控</h1>
+      <p class="text-xs text-zinc-400 mt-1">请登录管理员账号</p>
+    </div>
+
+    <!-- 登录表单 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-zinc-100 p-6">
+      {% if error %}
+      <div class="bg-red-50 border border-red-100 text-red-600 text-xs px-3 py-2 rounded-xl mb-4">{{ error }}</div>
+      {% endif %}
+      <form method="post" action="/login" class="space-y-4">
+        <label class="flex flex-col gap-1">
+          <span class="text-[11px] text-zinc-400 font-medium">邮箱</span>
+          <input name="email" type="email" autocomplete="email" required autofocus
+            class="px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-[11px] text-zinc-400 font-medium">密码</span>
+          <input name="password" type="password" autocomplete="current-password" required
+            class="px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </label>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white border-0 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm shadow-blue-600/20">
+          登录
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

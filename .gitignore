@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+*.db
+
+# 持久化配置（含数据库连接串、JWT 密钥等敏感信息）
+data/config.json

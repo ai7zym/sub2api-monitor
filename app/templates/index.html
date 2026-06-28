@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}总览 - 上游价格监控{% endblock %}
+{% block content %}
+
+<!-- 顶栏操作区 -->
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+  <h2 class="text-sm font-semibold text-zinc-700 hidden sm:block">站点状态</h2>
+  <div class="flex gap-2 items-center w-full sm:w-auto">
+    <form method="post" action="/api/monitor/run" onsubmit="manualRun(event)" class="flex-1 sm:flex-initial">
+      <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 text-white border-0 px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm shadow-blue-600/20">立即抓取</button>
+    </form>
+    <div class="flex items-center gap-1.5 bg-white border border-zinc-200 rounded-xl px-3 py-1.5">
+      <span class="text-xs text-zinc-400 hidden sm:inline">间隔</span>
+      <input id="interval-input" type="number" min="1" value="{{ interval }}"
+        class="w-12 text-xs text-center border-0 p-0 focus:outline-none bg-transparent font-medium">
+      <span class="text-xs text-zinc-400">秒</span>
+      <button onclick="updateInterval(event)" class="text-xs text-blue-600 font-medium hover:text-blue-700">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 移动端：卡片视图 ============ -->
+<div class="sm:hidden space-y-3">
+  {% for card in site_cards %}
+  <div class="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
+    <!-- 卡片头 -->
+    <div class="px-4 py-3 bg-gradient-to-r from-{{ card.color }}-50 to-white flex items-center justify-between">
+      <div>
+        <div class="text-sm font-semibold text-zinc-800">{{ card.site.domain }}</div>
+        <div class="text-xs text-zinc-400 mt-0.5">{{ card.site.remark or '' }}</div>
+      </div>
+      <div class="text-right">
+        <div class="text-lg font-bold text-zinc-800">
+          {% if card.snaps %}
+            {{ card.snaps[0].balance if card.snaps[0].balance is not none else '-' }}
+          {% else %}-{% endif %}
+        </div>
+        <div class="text-[10px] text-zinc-400">余额</div>
+      </div>
+    </div>
+
+    {% if card.snaps %}
+    <div class="divide-y divide-zinc-50">
+      {% for snap in card.snaps %}
+      <div class="px-4 py-2.5 flex items-center justify-between">
+        <div class="flex flex-col gap-0.5 min-w-0">
+          <span class="text-xs font-medium text-zinc-700 truncate">{{ snap.key_name or '-' }}</span>
+          <span class="text-[10px] text-zinc-400">
+            {{ snap.group_name or '-' }} &middot; {{ snap.fetched_at.strftime('%m-%d %H:%M') if snap.fetched_at else '-' }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if snap.rate_multiplier is not none %}
+            <span class="text-xs font-semibold text-zinc-700">{{ snap.rate_multiplier }}</span>
+          {% else %}
+            <span class="text-xs text-zinc-300">-</span>
+          {% endif %}
+          {% if snap.error %}
+            <span class="text-[10px] text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">{{ snap.error }}</span>
+          {% else %}
+            <span class="inline-block w-1.5 h-1.5 rounded-full {{ 'bg-green-400' if snap.key_status == 'active' else 'bg-zinc-300' }}"></span>
+          {% endif %}
+          {% if snap.key_id and card.site_token %}
+            {% if snap.key_status == 'active' %}
+              <button onclick="toggleKey({{ card.site.id }}, {{ snap.key_id }}, 'disable', this)"
+                class="bg-red-50 active:bg-red-100 text-red-500 border-0 px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors">禁用</button>
+            {% elif snap.key_status == 'inactive' %}
+              <button onclick="toggleKey({{ card.site.id }}, {{ snap.key_id }}, 'enable', this)"
+                class="bg-green-50 active:bg-green-100 text-green-500 border-0 px-2 py-0.5 rounded-lg text-[10px] font-medium transition-colors">启用</button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-4 py-5 text-center text-xs text-zinc-300">暂无数据</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl shadow-sm border border-zinc-100 p-8 text-center text-sm text-zinc-400">
+    还没有站点<br><a href="/sites" class="text-blue-600 font-medium mt-1 inline-block">去添加</a>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ============ 桌面端：表格视图 ============ -->
+<div class="hidden sm:block bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="border-b border-zinc-100">
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">域名</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">余额</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80 hidden md:table-cell">分组</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">倍率</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">Key</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">状态</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80 whitespace-nowrap">时间</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table_rows %}
+        <tr class="border-b border-zinc-50 {{ row.bg }}">
+          {% if row.is_first %}
+          <td class="p-3 font-medium text-zinc-700" rowspan="{{ row.rowspan }}">
+            <div class="text-zinc-800">{{ row.site.domain }}</div>
+            {% if row.site.remark %}<div class="text-[10px] text-zinc-400 mt-0.5">{{ row.site.remark }}</div>{% endif %}
+          </td>
+          <td class="p-3 text-zinc-500" rowspan="{{ row.rowspan }}">{{ row.snap.balance if row.snap and row.snap.balance is not none else '-' }}</td>
+          {% endif %}
+          {% if row.snap %}
+            <td class="p-3 text-zinc-500 hidden md:table-cell">{{ row.snap.group_name or '-' }}</td>
+            <td class="p-3">
+              {% if row.snap.rate_multiplier is not none %}
+                <span class="font-medium text-zinc-700">{{ row.snap.rate_multiplier }}</span>
+              {% else %}<span class="text-zinc-300">-</span>{% endif %}
+            </td>
+            <td class="p-3 text-zinc-600">{{ row.snap.key_name or '-' }}</td>
+            <td class="p-3">
+              {% if row.snap.error %}
+                <span class="inline-flex items-center gap-1 text-red-500 text-[11px]"><span class="w-1.5 h-1.5 rounded-full bg-red-400 inline-block"></span>{{ row.snap.error }}</span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 text-zinc-500 text-[11px]"><span class="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"></span>{{ row.snap.key_status or '正常' }}</span>
+              {% endif %}
+            </td>
+            <td class="p-3 text-zinc-400 text-[11px] whitespace-nowrap">{{ row.snap.fetched_at.strftime('%m-%d %H:%M') if row.snap.fetched_at else '-' }}</td>
+            <td class="p-3">
+              {% if row.snap.key_id and row.site_token %}
+                {% if row.snap.key_status == 'active' %}
+                  <button onclick="toggleKey({{ row.site.id }}, {{ row.snap.key_id }}, 'disable', this)"
+                    class="bg-red-50 hover:bg-red-100 text-red-500 border-0 px-2 py-0.5 rounded-lg text-[11px] font-medium transition-colors">禁用</button>
+                {% elif row.snap.key_status == 'inactive' %}
+                  <button onclick="toggleKey({{ row.site.id }}, {{ row.snap.key_id }}, 'enable', this)"
+                    class="bg-green-50 hover:bg-green-100 text-green-500 border-0 px-2 py-0.5 rounded-lg text-[11px] font-medium transition-colors">启用</button>
+                {% else %}<span class="text-zinc-300">-</span>{% endif %}
+              {% else %}<span class="text-zinc-300">-</span>{% endif %}
+            </td>
+          {% else %}
+            <td class="p-3 text-zinc-300 text-center" colspan="6">暂无数据</td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="p-8 text-center text-zinc-400 text-sm">还没有站点，<a href="/sites" class="text-blue-600 hover:underline font-medium">去添加</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 最近告警 -->
+<section class="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden mt-4">
+  <div class="px-4 sm:px-5 py-4 border-b border-zinc-50">
+    <h2 class="text-sm font-semibold text-zinc-700">最近告警</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-[11px] sm:text-xs">
+      <thead>
+        <tr class="border-b border-zinc-50">
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/50">时间</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/50">域名</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/50 hidden sm:table-cell">原倍率</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/50">新倍率</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/50 hidden md:table-cell">说明</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/50">状态</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alerts %}
+        <tr class="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+          <td class="p-3 text-zinc-400 whitespace-nowrap">{{ a.created_at.strftime('%m-%d %H:%M') }}</td>
+          <td class="p-3 text-zinc-700">{{ a.domain }}</td>
+          <td class="p-3 text-zinc-500 hidden sm:table-cell">{{ a.old_rate }}</td>
+          <td class="p-3 font-medium {% if a.new_rate and a.old_rate and a.new_rate > a.old_rate %}text-red-500{% elif a.new_rate and a.old_rate %}text-emerald-500{% else %}text-zinc-700{% endif %}">{{ a.new_rate }}</td>
+          <td class="p-3 text-zinc-500 text-[11px] hidden md:table-cell max-w-[200px] truncate">{{ a.message }}</td>
+          <td class="p-3">
+            {% if a.acknowledged %}
+              <span class="text-[10px] text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">已读</span>
+            {% else %}
+              <span class="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">未读</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="p-8 text-center text-zinc-400 text-sm">暂无告警</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+let lastSnapshotCount = {{ table_rows|length }};
+let polling = true;
+
+function pollUpdates() {
+  if (!polling || document.hidden) return;
+  fetch('/api/monitor/version')
+    .then(r => r.json())
+    .then(data => {
+      if (data.snapshot_count !== lastSnapshotCount) {
+        location.reload();
+      }
+    })
+    .catch(() => {});
+}
+
+setInterval(pollUpdates, 10000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) pollUpdates();
+});
+
+async function manualRun(e){
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.innerHTML = '抓取中...';
+  btn.classList.add('opacity-60');
+  try { await fetch('/api/monitor/run', {method:'POST'}); location.reload(); }
+  catch(err){ alert('抓取失败: '+err); btn.disabled=false; btn.innerHTML='立即抓取'; btn.classList.remove('opacity-60'); }
+}
+function updateInterval(e){
+  e.preventDefault();
+  const btn = e.target;
+  btn.disabled = true;
+  const input = document.getElementById('interval-input');
+  fetch('/api/settings/fetch-interval', {
+    method:'PUT', headers:{'content-type':'application/json'},
+    body: JSON.stringify({seconds: parseInt(input.value)})
+  }).then(r => r.ok ? location.reload() : r.json().then(e => alert('失败: '+e.detail))).catch(() => {})
+   .finally(() => btn.disabled = false);
+}
+async function toggleKey(siteId, keyId, action, btn){
+  btn.disabled = true;
+  btn.textContent = action === 'enable' ? '启用中' : '禁用中';
+  try {
+    const r = await fetch('/api/keys/' + siteId + '/' + keyId + '/' + action, {method:'POST'});
+    if(r.ok){ location.reload(); }
+    else { const e = await r.json(); alert('操作失败: '+e.detail); btn.disabled=false; btn.textContent=action=='enable'?'启用':'禁用'; }
+  }
+  catch(err){ alert('操作失败: '+err); btn.disabled=false; btn.textContent=action=='enable'?'启用':'禁用'; }
+}
+</script>
+{% endblock %}

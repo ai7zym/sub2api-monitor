@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    container_name: price-monitor
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai

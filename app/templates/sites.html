@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}站点管理 - 上游价格监控{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <h2 class="text-sm font-semibold text-zinc-700 hidden sm:block">站点管理</h2>
+</div>
+
+<!-- 新增站点 -->
+<section class="bg-white rounded-2xl shadow-sm border border-zinc-100 mb-4 p-4 sm:p-5">
+  <h3 class="text-sm font-semibold text-zinc-700 mb-4">新增站点</h3>
+  <form method="post" action="/sites/create" class="space-y-3">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <label class="flex flex-col gap-1">
+        <span class="text-[11px] text-zinc-400 font-medium">域名</span>
+        <input name="domain" placeholder="sub.example.xyz" required
+          class="px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-[11px] text-zinc-400 font-medium">邮箱</span>
+        <input name="email" type="email" required
+          class="px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-[11px] text-zinc-400 font-medium">密码</span>
+        <input name="password" type="password" required
+          class="px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+      </label>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div class="flex items-center gap-4">
+        <label class="flex flex-col gap-1 flex-1 sm:flex-initial">
+          <span class="text-[11px] text-zinc-400 font-medium">备注</span>
+          <input name="remark" placeholder="方便辨识" class="w-full sm:w-40 px-3 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer pt-5">
+          <input type="checkbox" name="enabled" value="true" checked class="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500">
+          <span class="text-sm text-zinc-600">启用</span>
+        </label>
+      </div>
+      <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 text-white border-0 px-6 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm shadow-blue-600/20">添加</button>
+    </div>
+  </form>
+</section>
+
+<!-- 站点列表 - 桌面表格 -->
+<div class="hidden sm:block bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="border-b border-zinc-100">
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80 w-10">ID</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">域名</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">邮箱</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">密码</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80 hidden md:table-cell">备注</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">启用</th>
+          <th class="text-left p-3 text-zinc-400 font-medium bg-zinc-50/80">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sites %}
+        <tr class="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+          <form method="post" action="/sites/{{ s.id }}/update">
+            <td class="p-3 text-zinc-400 text-xs tabular-nums">{{ s.id }}</td>
+            <td class="p-3">
+              <input name="domain" value="{{ s.domain }}" required
+                class="w-full min-w-[130px] px-2 py-1.5 border border-zinc-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50 transition-all">
+            </td>
+            <td class="p-3">
+              <input name="email" value="{{ s.email }}" required
+                class="w-full min-w-[150px] px-2 py-1.5 border border-zinc-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50 transition-all">
+            </td>
+            <td class="p-3">
+              <input name="password" type="password" placeholder="留空不改"
+                class="w-full min-w-[90px] px-2 py-1.5 border border-zinc-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50 transition-all">
+            </td>
+            <td class="p-3 hidden md:table-cell">
+              <input name="remark" value="{{ s.remark or '' }}"
+                class="w-full min-w-[90px] px-2 py-1.5 border border-zinc-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50 transition-all">
+            </td>
+            <td class="p-3">
+              <input type="checkbox" name="enabled" value="true" {% if s.enabled %}checked{% endif %}
+                class="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500">
+            </td>
+            <td class="p-3">
+              <div class="flex gap-1.5">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white border-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">保存</button>
+          </form>
+                <form method="post" action="/sites/{{ s.id }}/delete" onsubmit="return confirm('确认删除 {{ s.domain }}?')" class="inline">
+                  <button type="submit" class="bg-white hover:bg-red-50 text-red-400 hover:text-red-500 border border-zinc-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">删除</button>
+                </form>
+              </div>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="p-8 text-center text-zinc-400 text-sm">暂无站点，在上方添加第一个</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 站点列表 - 移动卡片 -->
+<div class="sm:hidden space-y-3">
+  {% for s in sites %}
+  <div class="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
+    <div class="px-4 py-3 bg-zinc-50 flex items-center justify-between">
+      <span class="text-xs text-zinc-400">#{{ s.id }}</span>
+      <span class="text-xs font-medium text-zinc-500">{{ s.email }}</span>
+      <span class="text-[10px] {{ 'text-emerald-500' if s.enabled else 'text-zinc-300' }}">{{ '启用' if s.enabled else '禁用' }}</span>
+    </div>
+    <form method="post" action="/sites/{{ s.id }}/update" class="p-4 space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-zinc-400 w-10">域名</span>
+        <input name="domain" value="{{ s.domain }}" required class="flex-1 px-3 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50">
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-zinc-400 w-10">邮箱</span>
+        <input name="email" value="{{ s.email }}" required class="flex-1 px-3 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50">
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-zinc-400 w-10">密码</span>
+        <input name="password" type="password" placeholder="留空不改" class="flex-1 px-3 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50">
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-zinc-400 w-10">备注</span>
+        <input name="remark" value="{{ s.remark or '' }}" class="flex-1 px-3 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-zinc-50/50">
+      </div>
+      <div class="flex items-center justify-between pt-1">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="enabled" value="true" {% if s.enabled %}checked{% endif %} class="w-4 h-4 rounded border-zinc-300 text-blue-600">
+          <span class="text-sm text-zinc-500">启用</span>
+        </label>
+        <div class="flex gap-2">
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white border-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors">保存</button>
+    </form>
+          <form method="post" action="/sites/{{ s.id }}/delete" onsubmit="return confirm('确认删除?')" class="inline">
+            <button type="submit" class="bg-white hover:bg-red-50 text-red-400 border border-zinc-200 px-4 py-2 rounded-xl text-sm font-medium transition-colors">删除</button>
+          </form>
+        </div>
+      </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl shadow-sm border border-zinc-100 p-8 text-center text-sm text-zinc-400">暂无站点，在上方添加</div>
+  {% endfor %}
+</div>
+
+{% endblock %}
