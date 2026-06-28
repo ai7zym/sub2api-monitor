@@ -36,6 +36,11 @@ def update_site(session: Session, site: Site, data: SiteUpdate) -> Site:
 
 
 def delete_site(session: Session, site: Site) -> None:
+    # 先删除关联的快照和告警，避免外键约束冲突
+    for alert in session.exec(select(Alert).where(Alert.site_id == site.id)).all():
+        session.delete(alert)
+    for snap in session.exec(select(PriceSnapshot).where(PriceSnapshot.site_id == site.id)).all():
+        session.delete(snap)
     session.delete(site)
     session.commit()
 
